@@ -1,0 +1,618 @@
+{% comment %}
+  Custom Product Grid with Dynamic Hotspot Modal
+  Pure Vanilla JavaScript (No jQuery)
+  Includes automatic addition of 'Soft Winter Jacket' when Black + Medium is added.
+{% endcomment %}
+
+<div class="tisso-grid-section" id="tisso-grid-{{ section.id }}">
+  <div class="tisso-grid-header">
+    <h2 class="tisso-grid-title">{{ section.settings.title | default: "Tisso vison in the wild" }}</h2>
+  </div>
+
+  <div class="tisso-grid-container">
+    {% for block in section.blocks %}
+      {% assign prod = block.settings.product %}
+      <div class="tisso-grid-item" {{ block.shopify_attributes }}>
+        {% if prod != blank %}
+          <div class="tisso-image-wrap">
+            {% if block.settings.custom_image != blank %}
+              <img src="{{ block.settings.custom_image | image_url: width: 800 }}" alt="{{ prod.title | escape }}" loading="lazy" class="tisso-card-img">
+            {% elsif prod.featured_image != blank %}
+              <img src="{{ prod.featured_image | image_url: width: 800 }}" alt="{{ prod.title | escape }}" loading="lazy" class="tisso-card-img">
+            {% else %}
+              {{ 'image' | placeholder_svg_tag: 'tisso-card-img placeholder' }}
+            {% endif %}
+
+            <button type="button" 
+                    class="tisso-hotspot-btn" 
+                    aria-label="Quick view {{ prod.title | escape }}"
+                    data-product-handle="{{ prod.handle }}"
+                    style="top: {{ block.settings.dot_top }}%; left: {{ block.settings.dot_left }}%;">
+              <span class="tisso-hotspot-inner">+</span>
+            </button>
+          </div>
+        {% else %}
+          <div class="tisso-image-wrap tisso-empty-card">
+            {{ 'product-1' | placeholder_svg_tag: 'tisso-card-img placeholder' }}
+            <span class="tisso-placeholder-text">Select Product in Customizer</span>
+          </div>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+
+  {% comment %} Dynamic Modal {% endcomment %}
+  <div class="tisso-modal-overlay" id="tissoModalOverlay-{{ section.id }}" style="display: none;">
+    <div class="tisso-modal-card" role="dialog" aria-modal="true">
+      <button type="button" class="tisso-modal-close" id="tissoModalClose-{{ section.id }}">&times;</button>
+      
+      <div class="tisso-modal-body">
+        <div class="tisso-modal-left">
+          <img id="tissoModalImg-{{ section.id }}" src="" alt="Product image" class="tisso-modal-product-img">
+        </div>
+        <div class="tisso-modal-right">
+          <h3 id="tissoModalTitle-{{ section.id }}" class="tisso-modal-title"></h3>
+          <div id="tissoModalPrice-{{ section.id }}" class="tisso-modal-price"></div>
+          <div id="tissoModalDesc-{{ section.id }}" class="tisso-modal-desc"></div>
+
+          <form id="tissoAddToCartForm-{{ section.id }}" class="tisso-modal-form">
+            <input type="hidden" name="id" id="tissoSelectedVariantId-{{ section.id }}" value="">
+            
+            <div id="tissoOptionsContainer-{{ section.id }}" class="tisso-options-container">
+              {% comment %} Dynamically populated via vanilla JS {% endcomment %}
+            </div>
+
+            <button type="submit" class="tisso-add-to-cart-btn" id="tissoAddToCartBtn-{{ section.id }}">
+              <span>ADD TO CART</span>
+              <svg class="tisso-arrow-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+              </svg>
+            </button>
+            <div id="tissoStatusMsg-{{ section.id }}" class="tisso-status-msg"></div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.tisso-grid-section {
+  width: 100%;
+  padding: 60px 40px;
+  background-color: #bbd3e6;
+  box-sizing: border-box;
+  font-family: inherit;
+  color: #1a2a3a;
+}
+
+.tisso-grid-header {
+  margin-bottom: 30px;
+}
+
+.tisso-grid-title {
+  font-size: 2.2rem;
+  font-family: serif;
+  font-weight: 500;
+  color: #102a43;
+  margin: 0;
+}
+
+.tisso-grid-container {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.tisso-grid-item {
+  position: relative;
+  overflow: hidden;
+  background-color: #e2e8f0;
+}
+
+.tisso-image-wrap {
+  position: relative;
+  width: 100%;
+  padding-top: 120%;
+  overflow: hidden;
+}
+
+.tisso-card-img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.tisso-hotspot-btn {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(16, 42, 67, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.tisso-hotspot-btn:hover {
+  transform: translate(-50%, -50%) scale(1.15);
+  background: #ffffff;
+}
+
+.tisso-hotspot-inner {
+  font-size: 16px;
+  font-weight: 700;
+  color: #102a43;
+  line-height: 1;
+}
+
+/* Modal Styling */
+.tisso-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(16, 42, 67, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.tisso-modal-card {
+  position: relative;
+  background: #f7fafc;
+  width: 100%;
+  max-width: 580px;
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.25);
+  border: 1px solid #102a43;
+  padding: 30px;
+  box-sizing: border-box;
+}
+
+.tisso-modal-close {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  background: none;
+  border: none;
+  font-size: 26px;
+  cursor: pointer;
+  color: #102a43;
+  line-height: 1;
+}
+
+.tisso-modal-body {
+  display: flex;
+  gap: 22px;
+}
+
+.tisso-modal-left {
+  width: 42%;
+  flex-shrink: 0;
+}
+
+.tisso-modal-product-img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1.2;
+  object-fit: cover;
+  border: 1px solid #cbd5e1;
+}
+
+.tisso-modal-right {
+  width: 58%;
+  display: flex;
+  flex-direction: column;
+}
+
+.tisso-modal-title {
+  font-size: 1.25rem;
+  margin: 0 0 6px 0;
+  color: #102a43;
+  font-weight: 700;
+}
+
+.tisso-modal-price {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #102a43;
+  margin-bottom: 12px;
+}
+
+.tisso-modal-desc {
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: #486581;
+  margin-bottom: 16px;
+  max-height: 70px;
+  overflow-y: auto;
+}
+
+.tisso-option-group {
+  margin-bottom: 12px;
+}
+
+.tisso-option-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #627d98;
+  margin-bottom: 6px;
+}
+
+.tisso-pill-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tisso-pill-btn {
+  padding: 6px 14px;
+  border: 1px solid #9fb3c8;
+  background: #ffffff;
+  color: #102a43;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tisso-pill-btn.active {
+  border-color: #102a43;
+  background: #102a43;
+  color: #ffffff;
+}
+
+.tisso-select-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #9fb3c8;
+  background-color: #ffffff;
+  font-size: 0.85rem;
+  color: #102a43;
+  outline: none;
+  cursor: pointer;
+}
+
+.tisso-add-to-cart-btn {
+  width: 100%;
+  margin-top: 14px;
+  padding: 12px;
+  background-color: #102a43;
+  color: #ffffff;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.tisso-add-to-cart-btn:hover {
+  background-color: #243b53;
+}
+
+.tisso-status-msg {
+  font-size: 0.8rem;
+  margin-top: 8px;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .tisso-grid-section {
+    padding: 30px 16px;
+  }
+  .tisso-grid-container {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  .tisso-modal-body {
+    flex-direction: column;
+  }
+  .tisso-modal-left, .tisso-modal-right {
+    width: 100%;
+  }
+  .tisso-modal-card {
+    padding: 20px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+}
+</style>
+
+<script>
+(function() {
+  const sectionContainer = document.getElementById('tisso-grid-{{ section.id }}');
+  if (!sectionContainer) return;
+
+  const modal = document.getElementById('tissoModalOverlay-{{ section.id }}');
+  const closeBtn = document.getElementById('tissoModalClose-{{ section.id }}');
+  const modalImg = document.getElementById('tissoModalImg-{{ section.id }}');
+  const modalTitle = document.getElementById('tissoModalTitle-{{ section.id }}');
+  const modalPrice = document.getElementById('tissoModalPrice-{{ section.id }}');
+  const modalDesc = document.getElementById('tissoModalDesc-{{ section.id }}');
+  const optionsContainer = document.getElementById('tissoOptionsContainer-{{ section.id }}');
+  const variantInput = document.getElementById('tissoSelectedVariantId-{{ section.id }}');
+  const form = document.getElementById('tissoAddToCartForm-{{ section.id }}');
+  const statusMsg = document.getElementById('tissoStatusMsg-{{ section.id }}');
+
+  let currentProductData = null;
+  let selectedOptions = [];
+
+  function closeModal() {
+    modal.style.display = 'none';
+    currentProductData = null;
+    selectedOptions = [];
+    statusMsg.innerText = '';
+  }
+
+  closeBtn.addEventListener('click', closeModal);
+  modal.addEventListener('click', function(e) {
+    if (e.target === modal) closeModal();
+  });
+
+  // Hotspot click listener
+  sectionContainer.querySelectorAll('.tisso-hotspot-btn').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const handle = btn.getAttribute('data-product-handle');
+      if (!handle) return;
+
+      statusMsg.innerText = 'Loading...';
+      modal.style.display = 'flex';
+
+      fetch('/products/' + handle + '.js')
+        .then(function(res) { return res.json(); })
+        .then(function(product) {
+          currentProductData = product;
+          renderModal(product);
+        })
+        .catch(function(err) {
+          console.error(err);
+          statusMsg.innerText = 'Error loading product details.';
+        });
+    });
+  });
+
+  function renderModal(product) {
+    statusMsg.innerText = '';
+    modalTitle.innerText = product.title;
+    modalPrice.innerText = (product.price / 100).toFixed(2) + ' {{ cart.currency.symbol }}';
+    
+    // Clean html tags for brief description
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = product.description;
+    modalDesc.innerText = tempDiv.textContent || tempDiv.innerText || '';
+
+    const firstImage = product.featured_image || (product.images && product.images[0]) || '';
+    modalImg.src = firstImage;
+
+    optionsContainer.innerHTML = '';
+    selectedOptions = [];
+
+    // Setup first variant as initial state
+    const firstVariant = product.variants[0];
+    selectedOptions = [firstVariant.option1, firstVariant.option2, firstVariant.option3];
+    variantInput.value = firstVariant.id;
+
+    product.options.forEach(function(opt, optIndex) {
+      const group = document.createElement('div');
+      group.className = 'tisso-option-group';
+
+      const label = document.createElement('label');
+      label.className = 'tisso-option-label';
+      label.innerText = opt.name;
+      group.appendChild(label);
+
+      // Render pills for Color, dropdown for Size/others
+      if (opt.name.toLowerCase().indexOf('color') !== -1) {
+        const pillWrap = document.createElement('div');
+        pillWrap.className = 'tisso-pill-group';
+
+        opt.values.forEach(function(val) {
+          const pill = document.createElement('button');
+          pill.type = 'button';
+          pill.className = 'tisso-pill-btn' + (val === selectedOptions[optIndex] ? ' active' : '');
+          pill.innerText = val;
+          pill.addEventListener('click', function() {
+            pillWrap.querySelectorAll('.tisso-pill-btn').forEach(function(b) { b.classList.remove('active'); });
+            pill.classList.add('active');
+            selectedOptions[optIndex] = val;
+            updateVariantSelection();
+          });
+          pillWrap.appendChild(pill);
+        });
+        group.appendChild(pillWrap);
+      } else {
+        const select = document.createElement('select');
+        select.className = 'tisso-select-input';
+        opt.values.forEach(function(val) {
+          const optionEl = document.createElement('option');
+          optionEl.value = val;
+          optionEl.text = val;
+          if (val === selectedOptions[optIndex]) optionEl.selected = true;
+          select.appendChild(optionEl);
+        });
+        select.addEventListener('change', function() {
+          selectedOptions[optIndex] = select.value;
+          updateVariantSelection();
+        });
+        group.appendChild(select);
+      }
+
+      optionsContainer.appendChild(group);
+    });
+  }
+
+  function updateVariantSelection() {
+    if (!currentProductData) return;
+    const matched = currentProductData.variants.find(function(v) {
+      const match1 = !selectedOptions[0] || v.option1 === selectedOptions[0];
+      const match2 = !selectedOptions[1] || v.option2 === selectedOptions[1];
+      const match3 = !selectedOptions[2] || v.option3 === selectedOptions[2];
+      return match1 && match2 && match3;
+    });
+
+    if (matched) {
+      variantInput.value = matched.id;
+      modalPrice.innerText = (matched.price / 100).toFixed(2) + ' {{ cart.currency.symbol }}';
+      if (matched.featured_image && matched.featured_image.src) {
+        modalImg.src = matched.featured_image.src;
+      }
+    }
+  }
+
+  // Add to cart form submit
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const variantId = variantInput.value;
+    if (!variantId) return;
+
+    statusMsg.innerText = 'Adding to cart...';
+    statusMsg.style.color = '#102a43';
+
+    // Check bonus rule condition: Black + Medium
+    const isBlackAndMedium = selectedOptions.some(function(opt) {
+      return opt && opt.toString().toLowerCase() === 'black';
+    }) && selectedOptions.some(function(opt) {
+      const val = opt ? opt.toString().toLowerCase() : '';
+      return val === 'medium' || val === 'm';
+    });
+
+    const itemsToAdd = [
+      { id: parseInt(variantId), quantity: 1 }
+    ];
+
+    if (isBlackAndMedium) {
+      // Find Soft Winter Jacket variant
+      fetch('/products/dark-winter-jacket.js')
+        .then(function(res) {
+          if (!res.ok) return null;
+          return res.json();
+        })
+        .then(function(jacketData) {
+          if (jacketData && jacketData.variants && jacketData.variants.length > 0) {
+            itemsToAdd.push({
+              id: parseInt(jacketData.variants[0].id),
+              quantity: 1
+            });
+          }
+          sendCartAddRequest(itemsToAdd);
+        })
+        .catch(function() {
+          sendCartAddRequest(itemsToAdd);
+        });
+    } else {
+      sendCartAddRequest(itemsToAdd);
+    }
+  });
+
+  function sendCartAddRequest(items) {
+    fetch('/cart/add.js', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items: items })
+    })
+    .then(function(res) { return res.json(); })
+    .then(function() {
+      statusMsg.innerText = 'Added to cart successfully!';
+      statusMsg.style.color = 'green';
+      setTimeout(function() {
+        closeModal();
+        window.location.reload();
+      }, 1000);
+    })
+    .catch(function(err) {
+      console.error(err);
+      statusMsg.innerText = 'Failed to add to cart.';
+      statusMsg.style.color = 'red';
+    });
+  }
+})();
+</script>
+
+{% schema %}
+{
+  "name": "Tisso Product Grid",
+  "settings": [
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Grid Section Title",
+      "default": "Tisso vison in the wild"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "grid_item",
+      "name": "Grid Product Item",
+      "limit": 6,
+      "settings": [
+        {
+          "type": "product",
+          "id": "product",
+          "label": "Select Product"
+        },
+        {
+          "type": "image_picker",
+          "id": "custom_image",
+          "label": "Custom Model Image (Optional)"
+        },
+        {
+          "type": "range",
+          "id": "dot_top",
+          "min": 10,
+          "max": 90,
+          "step": 1,
+          "unit": "%",
+          "label": "Dot Vertical Position",
+          "default": 50
+        },
+        {
+          "type": "range",
+          "id": "dot_left",
+          "min": 10,
+          "max": 90,
+          "step": 1,
+          "unit": "%",
+          "label": "Dot Horizontal Position",
+          "default": 50
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Tisso Product Grid",
+      "blocks": [
+        { "type": "grid_item" },
+        { "type": "grid_item" },
+        { "type": "grid_item" },
+        { "type": "grid_item" },
+        { "type": "grid_item" },
+        { "type": "grid_item" }
+      ]
+    }
+  ]
+}
+{% endschema %}
