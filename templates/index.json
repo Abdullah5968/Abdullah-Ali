@@ -316,49 +316,49 @@
         "grid_item_8WdBX4": {
           "type": "grid_item",
           "settings": {
-            "product": "",
-            "dot_top": 50,
-            "dot_left": 50
+            "product": "black-leather-bag",
+            "dot_top": 45,
+            "dot_left": 75
           }
         },
         "grid_item_wzDbeX": {
           "type": "grid_item",
           "settings": {
-            "product": "",
-            "dot_top": 50,
-            "dot_left": 50
+            "product": "blue-silk-tuxedo",
+            "dot_top": 48,
+            "dot_left": 72
           }
         },
         "grid_item_DxJ7WF": {
           "type": "grid_item",
           "settings": {
-            "product": "",
-            "dot_top": 50,
-            "dot_left": 50
+            "product": "chequered-red-shirt",
+            "dot_top": 35,
+            "dot_left": 70
           }
         },
         "grid_item_DifUVj": {
           "type": "grid_item",
           "settings": {
-            "product": "",
-            "dot_top": 50,
-            "dot_left": 50
+            "product": "classic-leather-jacket",
+            "dot_top": 38,
+            "dot_left": 68
           }
         },
         "grid_item_qmbeHT": {
           "type": "grid_item",
           "settings": {
-            "product": "",
-            "dot_top": 50,
-            "dot_left": 50
+            "product": "classic-varsity-top",
+            "dot_top": 38,
+            "dot_left": 62
           }
         },
         "grid_item_xndTtH": {
           "type": "grid_item",
           "settings": {
-            "product": "",
-            "dot_top": 50,
-            "dot_left": 50
+            "product": "silk-summer-top",
+            "dot_top": 45,
+            "dot_left": 72
           }
         }
       },
